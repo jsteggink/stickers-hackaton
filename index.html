@@ -166,6 +166,7 @@
     G6.registerNode('dom-node', {
         draw: (cfg, group) => {
             const stroke = cfg.style ? cfg.style.stroke || '#5B8FF9' : '#5B8FF9';
+            const stickercolor = cfg.color;
             const shape = group.addShape('dom', {
                 attrs: {
                     width: cfg.size[0],
@@ -173,10 +174,10 @@
                     html: `
         <div id=${
                         cfg.id
-                    } class='dom-node' style="background-color: #fff; border: 2px solid ${stroke}; border-radius: 5px; width: ${
+                    } class='dom-node' style="background-color: #fff; border: 0px solid ${stroke}; border-radius: 5px; width: ${
                         cfg.size[0] - 5
                     }px; height: ${cfg.size[1] - 5}px; display: flex;">
-          <div style="height: 100%; width: 33%; background-color: #CDDDFD">
+          <div style="height: 100%; width: 33%; background-color: ${stickercolor}">
             <img alt="" style="line-height: 100%; margin-left: 7px;" src="sticker.svg" width="64" height="64" />
           </div>
           <span style="margin:auto; padding:auto; color: #5B8FF9">${cfg.label}</span>
