@@ -8,6 +8,8 @@
 <div id="container" style="height: 1000px; width: 2000px"></div>
 <script src="https://gw.alipayobjects.com/os/lib/antv/g6/4.5.0/dist/g6.min.js"></script>
 
+
+
 <script>
     // Tekstlengte: https://g6.antv.vision/en/examples/item/label#labelLen1
     // Contextmenu om stickers aan te passen:
@@ -16,9 +18,100 @@
     // https://g6.antv.vision/en/examples/item/customNode#svgDom
     // Toolbar:
     // https://g6.antv.vision/en/examples/tool/toolbar#toolbar
+
+
+    const lightBlue = '#5b8ff9';
+    const lightOrange = '#5ad8a6';
+
+    G6.registerNode('sticker', {
+        draw: (cfg, group) => {
+            group.addShape("text", {
+                attrs: {
+                    y: 39,
+                    x: 58,
+                    fill: "#000",
+                    text: cfg.label,
+                    fontSize: 12,
+                    fontWeight: 500,
+                },
+                draggable: true,
+            });
+
+            var sticker = group.addShape('path', {
+                attrs: {
+                    path: "M52.709,43.022L15.174,43.022C13.029,43.022 11.291,41.788 11.291,40.266L11.291,23.734C11.291,22.212 13.029,20.978 15.174,20.978L52.709,20.978L43.649,32L52.709,43.022Z",
+                    lineWidth: 0,
+                    fill: cfg.color,
+                },
+                name: 'sticker',
+                draggable: true,
+            });
+
+            return sticker;
+        },
+    });
+
+    // Register a custom behavior: click two end nodes to add an edge
+    G6.registerBehavior('click-add-edge', {
+        // Set the events and the corresponding responsing function for this behavior
+        getEvents() {
+            return {
+                'node:click': 'onClick', // The event is canvas:click, the responsing function is onClick
+                mousemove: 'onMousemove', // The event is mousemove, the responsing function is onMousemove
+                'edge:click': 'onEdgeClick', // The event is edge:click, the responsing function is onEdgeClick
+            };
+        },
+        // The responsing function for node:click defined in getEvents
+        onClick(ev) {
+            const self = this;
+            const node = ev.item;
+            const graph = self.graph;
+            // The position where the mouse clicks
+            const point = { x: ev.x, y: ev.y };
+            const model = node.getModel();
+            if (self.addingEdge && self.edge) {
+                graph.updateItem(self.edge, {
+                    target: model.id,
+                });
+
+                self.edge = null;
+                self.addingEdge = false;
+            } else {
+                // Add anew edge, the end node is the current node user clicks
+                self.edge = graph.addItem('edge', {
+                    source: model.id,
+                    target: model.id,
+                });
+                self.addingEdge = true;
+            }
+        },
+        // The responsing function for mousemove defined in getEvents
+        onMousemove(ev) {
+            const self = this;
+            // The current position the mouse clicks
+            const point = { x: ev.x, y: ev.y };
+            if (self.addingEdge && self.edge) {
+                // Update the end node to the current node the mouse clicks
+                self.graph.updateItem(self.edge, {
+                    target: point,
+                });
+            }
+        },
+        // The responsing function for edge:click defined in getEvents
+        onEdgeClick(ev) {
+            const self = this;
+            const currentEdge = ev.item;
+            if (self.addingEdge && self.edge === currentEdge) {
+                self.graph.removeItem(self.edge);
+                self.edge = null;
+                self.addingEdge = false;
+            }
+        },
+    });
+
     const data = {
         nodes: [
-            {id: "1", label: "PV - informeren verdachte", color: "#E44234", comboId: 'A'},
+            {id: "1", label: "PV - informeren verdachte", color: "#E44234", comboId: 'A', img: "sticker.svg"},
             {id: "2", label: "Bronnenlijst NFI", color: "#80E5B1"},
             {id: "3", label: "Munitie - foto2", color: "#FFC67B", comboId: 'B'},
             {id: "4", label: "Munitie - foto3", color: "#FFC67B", comboId: 'B'},
@@ -163,37 +256,24 @@
         }
     });
 
-    G6.registerNode('dom-node', {
-        draw: (cfg, group) => {
-            const stroke = cfg.style ? cfg.style.stroke || '#5B8FF9' : '#5B8FF9';
-            const stickercolor = cfg.color;
-            const shape = group.addShape('dom', {
-                attrs: {
-                    width: cfg.size[0],
-                    height: cfg.size[1],
-                    html: `
-        <div id=${
-                        cfg.id
-                    } class='dom-node' style="background-color: #fff; border: 0px solid ${stroke}; border-radius: 5px; width: ${
-                        cfg.size[0] - 5
-                    }px; height: ${cfg.size[1] - 5}px; display: flex;">
-          <div style="height: 100%; width: 33%; background-color: ${stickercolor}">
-            <img alt="" style="line-height: 100%; margin-left: 7px;" src="sticker.svg" width="64" height="64" />
-          </div>
-          <span style="margin:auto; padding:auto; color: #5B8FF9">${cfg.label}</span>
-        </div>
-          `,
-                },
-                draggable: true,
-            });
-            return shape;
-        },
-    });
-
     let sortByCombo = false;
     const descriptionDiv = document.createElement('button');
     descriptionDiv.innerHTML = 'Enable sortByCombo';
     const container = document.getElementById('container');
+
+    // Add a selector to DOM
+    const selector = document.createElement('select');
+    selector.id = 'selector';
+    const selection1 = document.createElement('option');
+    selection1.value = 'default';
+    selection1.innerHTML = 'Default Mode';
+    const selection3 = document.createElement('option');
+    selection3.value = 'addEdge';
+    selection3.innerHTML = 'Add Edge (By clicking two end nodes)';
+    selector.appendChild(selection1);
+    selector.appendChild(selection3);
+    container.appendChild(selector);
+
     container.appendChild(descriptionDiv);
 
     descriptionDiv.addEventListener('click', (e) => {
@@ -212,7 +292,6 @@
         fitView: true,
         fitViewPadding: 30,
         animate: true,
-        renderer: 'svg',
         groupByTypes: true,
         modes: {
             default: [
@@ -220,11 +299,14 @@
                 'drag-node',
                 'drag-canvas',
                 'zoom-canvas',
+                //'click-select',
                 {
                     type: 'collapse-expand-combo',
                     relayout: false,
                 },
             ],
+            addEdge: ['click-add-edge', 'click-select', 'drag-canvas',
+                'zoom-canvas', 'drag-node']
         },
         layout: {
             type: 'dagre',
@@ -233,12 +315,11 @@
             nodesep: 50,
         },
         defaultNode: {
-            size: [200, 70],
-            type: 'dom-node',
-            //anchorPoints: [[0.5, 0], [0.5, 1]]
+            type: 'sticker',
         },
         defaultEdge: {
             type: 'line',
+
         },
         defaultCombo: {
             type: 'rect',
@@ -259,39 +340,24 @@
       });
     });
 
+    /*
+    graph.on('nodeselectchange', (e) => {
+        // The current manipulated item
+        console.log(e.target);
+        // The set of selected items after this operation
+        console.log(e.selectedItems);
+        // A boolean tag to distinguish if the current operation is select(`true`) or deselect (`false`)
+        console.log(e.select);
+    });*/
 
     graph.data(data);
     graph.render();
 
-    console.log('comboTrees', graph.get('comboTrees'))
-
-
-    const bindClickListener = () => {
-        const domNodes = document.getElementsByClassName('dom-node');
-        for (let i = 0; i < domNodes.length; i++) {
-            const dom = domNodes[i];
-            // open the following lines pls!
-            dom.addEventListener('click', (e) => {
-               listener(dom);
-            });
-        }
-    };
-
-    bindClickListener();
-
-    // after update the item, all the DOMs will be re-rendered
-    // so the listeners should be rebinded to the new DOMs
-    graph.on('afterupdateitem', (e) => {
-        bindClickListener();
+    selector.addEventListener('change', (e) => {
+        const value = e.target.value;
+        // change the behavior mode
+        graph.setMode(value);
     });
-    graph.on('afterrender', (e) => {
-        bindClickListener();
-    });
-    // if it is TreeGraph and with default animate:true, you should bind the litsener after animation
-    graph.on('afteranimate', (e) => {
-       bindClickListener();
-    });
-
 
     // Last part
     if (typeof window !== 'undefined')
@@ -300,9 +366,6 @@
             if (!container || !container.scrollWidth || !container.scrollHeight) return;
             graph.changeSize(container.scrollWidth, container.scrollHeight - 30);
         };
-
-
-
 
 
 
